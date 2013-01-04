@@ -1,0 +1,24 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <title></title>
+        <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+        
+        <link rel="stylesheet" href="css/engine.css" type="text/css" media="screen">
+        
+        <script type="text/javascript" src="js/lib/jquery-1.8.3.min.js"></script>
+        <script type="text/javascript" src="js/engine.js"></script>
+        
+    </head>
+    <body>
+        <div id="game"></div>
+        <script type="text/javascript">
+            $(function() {
+                JSEngine.load(function() {
+                    var canvas = JSEngine.init("game");
+                    JSEngine.loadWorld('assets/worlds/world1.js');
+                });
+            });
+        </script>
+    </body>
+</html>

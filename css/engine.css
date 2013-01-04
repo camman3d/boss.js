@@ -1,0 +1,16 @@
+/* 
+    Document   : engine
+    Created on : Dec 14, 2012, 8:52:26 AM
+    Author     : Josh
+    Description:
+        Purpose of the stylesheet follows.
+*/
+
+.jsengine {
+    background: black;
+    position: relative;
+}
+
+.jsengine .drawable {
+    position: absolute;
+}
