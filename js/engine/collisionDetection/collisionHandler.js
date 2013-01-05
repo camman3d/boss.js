@@ -60,9 +60,9 @@ circle5.radius = 1;
 
 var collisionHandler = {
     
+    pointOfCollision: null,
+    
     checkCollision: function(object1, object2) {
-        // For now assume two polygons
-        // TODO: Allow for circles
         // TODO: update the point of collision 
         
         // Collision of two polygons
@@ -85,9 +85,32 @@ var collisionHandler = {
         return true;
     },
 
-    circleCircle: function(object1, object2) {
-        var dist = object1.center.distanceFrom(object2.center);
-        return (dist <= object1.radius + object2.radius);
+    circleCircle: function(circle1, circle2) {
+//        var dist = object1.center.distanceFrom(object2.center);
+//        var result = (dist <= object1.radius + object2.radius);
+
+        // Create a line between the two centers
+        var line = collisionHandler.sat.buildLineFromSegment([circle1.center, circle2.center]);
+        
+        // If the line is null then the centers are the same
+        if(!line) {
+            collisionHandler.pointOfCollision = circle1.center.dup();
+            return true;
+        }
+        
+        // Project the circles onto the line
+        var projection1 = collisionHandler.sat.projectShapeOnLine(circle1, line);
+        var projection2 = collisionHandler.sat.projectShapeOnLine(circle2, line);
+        
+        // Check each projection for overlap
+        if(!collisionHandler.sat.segmentsOverlap(projection1, projection2))
+            return false;
+        
+        // Update the point of collision
+        var overlap = collisionHandler.sat.getOverlap(projection1, projection2);
+        collisionHandler.pointOfCollision = $V([(overlap[0].e(1) + overlap[1].e(1))/2, (overlap[0].e(2) + overlap[1].e(2))/2, 0]);
+        
+        return true;
     },
     
     polyCircle: function(polygon, circle) {
@@ -106,14 +129,18 @@ var collisionHandler = {
             if(!collisionHandler.sat.segmentsOverlap(projection1, projection2))
                 return false;
             
+            // TODO: Update the point of collision
+            
             // Create lines from the ends of the segment to the center of the circle
             // If the point on the line segment is the center of the circle then
             // the line will be null and it means we have a collision
             var l1 = collisionHandler.sat.buildLineFromSegment([edge[0], circle.center]);
             var l2 = collisionHandler.sat.buildLineFromSegment([edge[1], circle.center]);
             
-            if(l1 === null || l2 === null)
+            if(l1 === null || l2 === null) {
+                // TODO: Update the point of collision
                 return true;
+            }
             
             // Project onto those lines too
             var projPolyL1 = collisionHandler.sat.projectShapeOnLine(polygon, l1);
@@ -126,12 +153,16 @@ var collisionHandler = {
                 return false;
             if(!collisionHandler.sat.segmentsOverlap(projPolyL2, projCircL2))
                 return false;
+            
+            // TODO: Update the point of collision
         }
         
         return true;
     },
 
     polyPoly: function(object1, object2) {
+        var collisionPoints = [];
+        
         // For each shape
         var objects = [object1, object2];
         for(var i in objects) {
@@ -151,8 +182,27 @@ var collisionHandler = {
                 // Check each projection for overlap
                 if(!collisionHandler.sat.segmentsOverlap(projection1, projection2))
                     return false;
+                
+                // Save the point of collision
+                var overlap = collisionHandler.sat.getOverlap(projection1, projection2);
+                if(overlap[0] && overlap[1])
+                    collisionPoints.push($V([(overlap[0].e(1) + overlap[1].e(1))/2, (overlap[0].e(2) + overlap[1].e(2))/2, 0]));
+                
             }
         }
+        
+        // Average the collision points. This isn't perfect, but when we are dealing
+        // with mostly squares it's good enough
+        var averageX = 0,
+            averageY = 0;
+        for(i in collisionPoints) {
+            averageX += collisionPoints[i].e(1);
+            averageY += collisionPoints[i].e(2);
+        }
+        averageX /= collisionPoints.length;
+        averageY /= collisionPoints.length;
+        collisionHandler.pointOfCollision = $V([averageX, averageY, 0]);
+        
         return true;
     },
     
@@ -192,6 +242,20 @@ var collisionHandler = {
 
             return seg;
         },
+        
+        getOverlap: function(segment1, segment2) {
+            var p1, p2;
+            
+            if(collisionHandler.sat.segmentContainsPoint(segment1, segment2[0]))
+                p1 = segment2[0];
+            if(collisionHandler.sat.segmentContainsPoint(segment1, segment2[1]))
+                p2 = segment2[1];
+            if(collisionHandler.sat.segmentContainsPoint(segment2, segment1[0]))
+                p1 = segment1[0];
+            if(collisionHandler.sat.segmentContainsPoint(segment2, segment1[1]))
+                p2 = segment1[1];
+            return [p1, p2];
+        },
     
         projectCircleOnLine: function(shape, line) {
             // Project the middle and extend by the radius
@@ -214,11 +278,11 @@ var collisionHandler = {
 
         projectSegmentOnLine: function(segment, line) {
             // Point closest to isn't perfect. Besides we're working with pixels
-            // so we're going to round
+            // so we're going to round to the hundredth
             var p1 = line.pointClosestTo(segment[0]);
-            p1 = $V([Math.round(p1.e(1)), Math.round(p1.e(2)), 0]);
+            p1 = $V([Math.round(p1.e(1)*100)/100, Math.round(p1.e(2)*100)/100, 0]);
             var p2 = line.pointClosestTo(segment[1]);
-            p2 = $V([Math.round(p2.e(1)), Math.round(p2.e(2)), 0]);
+            p2 = $V([Math.round(p2.e(1)*100)/100, Math.round(p2.e(2)*100)/100, 0]);
             return [p1, p2];
         },
         
