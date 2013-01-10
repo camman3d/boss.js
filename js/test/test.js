@@ -5,7 +5,8 @@
 
 function test($out) {
     var testObjects = [
-        collisionTest
+        collisionTest,
+        entityTest
     ];
     for(var i in testObjects)
         testObjects[i].test($out);    

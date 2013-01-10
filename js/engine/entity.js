@@ -1,69 +1,57 @@
-/* 
- * To change this template, choose Tools | Templates
- * and open the template in the editor.
+/**
+ * If the collision model is passed in then it should be in normalized coordinates
  */
-
 function Entity(_init) {
-    this.drawable = null;
+    _init = _init || {};
+    this.collisionModel = _init.collisionModel || new Shape();
+    this.drawable = _init.drawable || null;
+    this.height = _init.height || 32;
+    this.position = _init.position || $V([0,0,0]);
+    this.rotate = _init.rotate || 0;
+    this.scale = _init.scale || {x: 1, y: 1};
+    this.width = _init.width || 32;
+    this.zIndex = _init.zIndex || 1;
     
-    // Overwritable init function
-    this.init = _init;
-    
-    // Collision Stuffs
-    this.collisionModel = {
-        type: "circle",
-        
-        center: [0.5, 0.5],
-        
-        // If a circle then define its radius in pixels
-        radius: 16,
-    
-        // If a polygon then define the points in normalized coordinates
-        poly: [new Point(0,0), new Point(0,1), new Point(1,1), new Point(1,0)]
-    };
-    this.getCenterPoint = function() {
-        var x = this.drawable.x + (this.drawable.width * this.center[0]);
-        var y = this.drawable.y + (this.drawable.height * this.center[1]);
-        return new Point(x, y);
-    };
-    this.getBoundingBox = function() {
-        var center = this.getCenterPoint();
-        
-        // If a circle then easy
-        if(this.collisionModel.type === "circle") {
-            var r = this.collisionModel.radius;
-            return [new Point(center.x - r, center.y - r),
-                new Point(center.x + r, center.y - r),
-                new Point(center.x + r, center.y + r),
-                new Point(center.x - r, center.y + r)];
-        }
-    };
-    
-    
-    // Movement
-    this.velocity = {
-        x: 0,
-        y: 0
-    };
-    this.timeStep = 100; // 1/10 second
-    this.move = function() {
-        // Check if we're stopped
-        if(this.velocity.x === 0 && this.velocity.y === 0)
-            return;
-        
-        if(this.drawable !== null) {
-            this.drawable.setPosition(
-                this.drawable.x + this.velocity.x,
-                this.drawable.y + this.velocity.y
-            );
-        }
-        
-        var e = this;
-        setTimeout(function() {e.move();}, e.Step)
-    };
-    this.setVelocity = function(x, y) {
-        this.velocity.x = x;
-        this.velocity.y = y;
-        this.move();
+    // Init the collision model if not defined
+    if(!_init.collisionModel) {
+        this.collisionModel.edges = [
+            [$V([0,0,0]), $V([1,0,0])],
+            [$V([1,0,0]), $V([1,1,0])],
+            [$V([1,1,0]), $V([0,1,0])],
+            [$V([0,1,0]), $V([0,0,0])]
+        ]
     }
+    
+    // Fit the collision model to the size and position
+    if(this.collisionModel.type !== "circle")
+        for(var i in this.collisionModel.edges)
+            for(var j in this.collisionModel.edges[i])
+                // Stretch the collision model to match the size
+                // Also offset the collision model by the position
+                this.collisionModel.edges[i][j].setElements([
+                    this.collisionModel.edges[i][j].e(1) * this.width + this.position.e(1),
+                    this.collisionModel.edges[i][j].e(2) * this.height + this.position.e(2),
+                ]);
+    else
+        // Offset the center of the circle by the position
+        this.collisionModel.center = this.collisionModel.center.add(this.position);
+    
+    /*
+     * ----------------------
+     *       Functions
+     * ----------------------
+     */
+    
+    this.setPosition = function(position) {
+        var diff = this.position.subtract(position);
+        this.position = position;
+        if(this.collisionModel.type === "circle")
+            this.collisionModel.center = position;
+        else
+            for(var i in this.collisionModel.edges)
+                for(var j in this.collisionModel.edges[i])
+                    this.collisionModel.edges[i][j] = this.collisionModel.edges[i][j].subtract(diff);
+        
+        // TODO: Notify the view
+    };
 }
