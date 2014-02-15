@@ -20,7 +20,7 @@ var JSEngine = {
             'js/engine/keyboardController.js',
             'js/engine/point.js',
             'js/engine/entity.js',
-            'js/engine/collisionHandler.js',
+            'js/engine/collisionDetection/collisionHandler.js',
         ];
         
         var loadScript = function(index) {
